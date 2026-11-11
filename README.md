@@ -17,6 +17,8 @@ Setiap workflow punya **sticky note** berisi langkah setup di kanvasnya.
 
 ## Cara impor
 
+Semua tipe node dan versinya sudah dicek tersedia di **n8n 2.47** (November 2026). Kalau n8n Anda jauh lebih lama, perbarui dulu.
+
 1. Buka n8n → **Workflows** → **Create workflow**.
 2. Klik menu **⋯** (kanan atas) → **Import from File**, pilih file `.json` dari folder [`workflows/`](workflows). Bisa juga salin isi file lalu tempel (Ctrl+V / Cmd+V) di kanvas kosong.
 3. Buat credential **OpenAI** (sekali saja, dipakai semua workflow):
