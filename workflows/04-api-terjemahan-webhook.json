@@ -1,0 +1,146 @@
+{
+  "name": "API terjemahan sederhana (Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## API terjemahan sederhana\nKirim teks, terima terjemahan. Cocok untuk deskripsi produk dwibahasa, Google Sheets, atau aplikasi lain.\n\n1. Buat credential **OpenAI** (Base URL penyedia + API key).\n2. Buat credential **Header Auth** untuk webhook: Name `X-Api-Key`, Value kata sandi buatanmu. Tanpa ini, siapa pun yang tahu URL-nya bisa memakai saldomu.\n3. Aktifkan workflow, lalu:\n\n```\ncurl -X POST https://n8n-kamu/webhook/terjemah \\\n  -H 'X-Api-Key: kata-sandi-kamu' \\\n  -H 'Content-Type: application/json' \\\n  -d '{\"teks\": \"Kopi susu gula aren\", \"ke\": \"English\"}'\n```",
+        "height": 400,
+        "width": 460
+      },
+      "id": "51e5659b-3ee5-5eee-b59a-c4e0f6bfa6e2",
+      "name": "Catatan",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -260
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "terjemah",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6358fd52-b337-5c49-bd59-1c7b70b80624",
+      "name": "Webhook terjemah",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "8082ae7e-8d86-5848-a523-c00c5703da9a",
+      "credentials": {
+        "httpHeaderAuth": {
+          "name": "Kunci webhook terjemah"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ String($json.body.teks || '').slice(0, 20000) }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "=Terjemahkan teks dari pengguna ke bahasa {{ $json.body.ke || 'English' }}. Pertahankan format, angka, nama merek, dan emoji. Balas HANYA dengan terjemahannya, tanpa penjelasan."
+            }
+          ]
+        }
+      },
+      "id": "97306d93-ac4f-5e4f-bb5f-4289226680dc",
+      "name": "Terjemahkan",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-v4.1-flash",
+          "mode": "id"
+        },
+        "options": {
+          "maxTokens": 2000,
+          "temperature": 0.2
+        }
+      },
+      "id": "c55a0ad3-912b-518a-b184-c60bc4f68ea5",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        220
+      ],
+      "credentials": {
+        "openAiApi": {
+          "name": "AI API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ terjemahan: $json.text }) }}",
+        "options": {}
+      },
+      "id": "e43181e5-34c6-5dc6-becb-55826eac3f3b",
+      "name": "Kirim hasil",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        500,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook terjemah": {
+      "main": [
+        [
+          {
+            "node": "Terjemahkan",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Terjemahkan": {
+      "main": [
+        [
+          {
+            "node": "Kirim hasil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Terjemahkan",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}

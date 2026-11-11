@@ -1,0 +1,210 @@
+{
+  "name": "Draf balasan email otomatis (Gmail)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Draf balasan email otomatis\nSetiap 5 menit membaca email baru yang belum dibaca, lalu AI menulis **draf** balasan di thread yang sama. Tidak ada email yang terkirim otomatis: kamu cek dan kirim sendiri dari Gmail.\n\n1. Buat credential **Gmail OAuth2** dan **OpenAI** (Base URL penyedia + API key).\n2. Ganti info bisnis di node **Tulis draf** (System message).\n3. Aktifkan workflow.\n\nEmail promosi, newsletter, dan notifikasi otomatis dijawab `SKIP` oleh AI dan dilewati.",
+        "height": 360,
+        "width": 420
+      },
+      "id": "609ea4d0-dac9-553d-babf-6ea4a6d81103",
+      "name": "Catatan",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -460,
+        -240
+      ]
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyX",
+              "value": 5,
+              "unit": "minutes"
+            }
+          ]
+        },
+        "simple": false,
+        "filters": {
+          "q": "-from:me -category:promotions -category:social",
+          "readStatus": "unread"
+        },
+        "options": {}
+      },
+      "id": "4045cefa-028d-54f0-b08d-e40ed4b86848",
+      "name": "Email masuk",
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Dari: {{ $json.from.text }}\nSubjek: {{ $json.subject }}\n\n{{ ($json.text || '').slice(0, 8000) }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Kamu membantu admin Toko Contoh membalas email pelanggan.\n\nAturan:\n- Kalau email ini promosi, newsletter, notifikasi otomatis, atau spam, balas persis: SKIP\n- Selain itu, tulis draf balasan dalam bahasa yang sama dengan email, sopan, maksimal 120 kata, tanpa baris subjek.\n- Jangan menjanjikan harga, refund, atau tanggal kirim. Kalau perlu data yang tidak kamu punya, tulis [ISI: ...] supaya admin melengkapinya.\n- Tutup dengan: Salam, Tim Toko Contoh\n\nInfo bisnis (ganti): jam kerja Senin-Jumat 09.00-17.00 WIB, pesanan dikirim 1x24 jam kerja."
+            }
+          ]
+        }
+      },
+      "id": "acd8f11e-6fbc-59de-ba71-17a9f2741025",
+      "name": "Tulis draf",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "deepseek-v4.1-flash",
+          "mode": "id"
+        },
+        "options": {
+          "maxTokens": 500,
+          "temperature": 0.3
+        }
+      },
+      "id": "06d58b77-dadb-5cf9-a7a4-76af6ec399d8",
+      "name": "OpenAI Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        240,
+        220
+      ],
+      "credentials": {
+        "openAiApi": {
+          "name": "AI API (OpenAI-compatible)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "2d8df853-ca0e-51ce-9c03-fdb66ac96420",
+              "leftValue": "={{ ($json.text || '').trim() }}",
+              "rightValue": "SKIP",
+              "operator": {
+                "type": "string",
+                "operation": "notStartsWith"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "49a85baf-2ecd-5947-8960-8be4f3e80ffa",
+      "name": "Perlu dibalas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        500,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "operation": "create",
+        "subject": "=Re: {{ $('Email masuk').item.json.subject }}",
+        "emailType": "text",
+        "message": "={{ $json.text }}",
+        "options": {
+          "threadId": "={{ $('Email masuk').item.json.threadId }}",
+          "sendTo": "={{ $('Email masuk').item.json.from.value[0].address }}"
+        }
+      },
+      "id": "28b282ba-634e-5f72-a465-abd94367841f",
+      "name": "Buat draf Gmail",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        740,
+        -20
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "name": "Gmail"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Email masuk": {
+      "main": [
+        [
+          {
+            "node": "Tulis draf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tulis draf": {
+      "main": [
+        [
+          {
+            "node": "Perlu dibalas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Perlu dibalas?": {
+      "main": [
+        [
+          {
+            "node": "Buat draf Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Tulis draf",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "tags": []
+}
